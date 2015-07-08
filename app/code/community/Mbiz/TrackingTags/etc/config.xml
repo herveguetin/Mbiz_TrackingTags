@@ -80,10 +80,14 @@ Product URL: {{product attr="product_url"}}
 Category ID: {{category attr="id"}}
 Category name: {{category attr="name"}}
 Category URL: {{category attr="url"}}
+To Have Products : {{category products="sku" type="configurable" limit="3" separator="," inQuote="0"}}
+will Display : SKUCONF-XXX,SKUCONF-YYY,SKUCONF-ZZZ
 -->]]></category_tag>
                 <cart_active>0</cart_active>
                 <cart_tag><![CDATA[<!--
 Cart items: {{cart items="id,sku,name"}}
+format Display exemple : {{cart items="sku" enclosureStart="[" enclosureEnd="]" separator="," inQuote="1"}}
+will display : ["SKU-XXX","SKU-YYY",..]
 Cart items count: {{cart attr="items_count"}}
 
 Quote total: {{quote attr="grand_total"}} {{quote attr="quote_currency_code"}}
@@ -94,6 +98,8 @@ Order ID: {{lastorder attr="id"}}
 Order increment ID: {{lastorder attr="increment_id"}}
 Order coupon : {{lastorder attr="coupon_code"}}
 Order items: {{lastorder items="id,sku,name,qty,qty_ordered"}}
+format Display exemple : {{lastorder items="sku" enclosureStart="[" enclosureEnd="]" separator=","}}
+will display : ["SKU-XXX","SKU-YYY",..]
 -->]]></checkout_success_tag>
                 <generic_active>0</generic_active>
                 <page_active>0</page_active>

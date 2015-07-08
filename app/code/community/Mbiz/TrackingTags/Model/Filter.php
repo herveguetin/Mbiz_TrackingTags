@@ -20,6 +20,36 @@ class Mbiz_TrackingTags_Model_Filter extends Mage_Core_Model_Email_Template_Filt
 
 // Monsieur Biz Tag NEW_VAR
 
+/**
+     * @param $items
+     * @param $params
+     * @param $attributes
+     * @return string
+     */
+    protected function _exportDisplayItems($items,$params,$attributes)
+    {
+
+        $exportItems = Mage::helper('core')->jsonEncode($items) ;
+
+        if(isset($params['enclosureStart']) || isset($params['separator'])) {
+            $attribute   = $attributes[0];
+            $arrayExport = array();
+            $arrayItems = json_decode($exportItems,true);
+            $quote     = (isset($params['inQuote']) && intval($params['inQuote'] >0))? '"' : '';
+            foreach ($arrayItems as $arrayItem){
+                $arrayExport[] =  $quote.$arrayItem[$attribute].$quote;
+            }
+            if(isset($params['enclosureStart']) && isset($params['enclosureEnd']) && isset($params['separator'])) {
+                $exportItems = $params['enclosureStart'].implode($params['separator'],$arrayExport).$params['enclosureEnd'] ;
+            }
+            elseif(isset($params['separator'])) {
+                $exportItems = implode($params['separator'],$arrayExport) ;
+            }
+        }
+        return $exportItems ;
+    }
+
+
     /**
      * @return string
      */
@@ -42,10 +72,7 @@ class Mbiz_TrackingTags_Model_Filter extends Mage_Core_Model_Email_Template_Filt
         return '';
     }
 
-    /**
-     * @return string
-     */
-    public function categoryDirective($construction)
+     public function categoryDirective($construction)
     {
         // This directive only works if we have a category!
         if (!$category = Mage::registry('category')) {
@@ -57,15 +84,35 @@ class Mbiz_TrackingTags_Model_Filter extends Mage_Core_Model_Email_Template_Filt
             // Only if we have an attribute
             if (isset($params['attr']) || isset($params['attribute'])) {
                 $attr = isset($params['attr']) ? $params['attr'] : $params['attribute'];
-
                 $data = $category->getDataUsingMethod($attr);
-
                 if ($attr == Mbiz_TrackingTags_Model_Config::CATEGORY_URL_KEY_ATTRIBUTE_CODE && Mage::getEdition() == Mage::EDITION_ENTERPRISE) {
                     $data = $this->_getEnterpriseUrlKey($category);
                 }
-
                 return Mage::helper('core')->jsQuoteEscape($data, '\'');
             }
+                // Products ?
+                if(isset($params['products'])){
+                    $attributesProducts = explode(',',$params['products']);
+                    $typeId = (isset($params['type'])) ? $params['type'] : 'configurable';
+                    $limit = isset($params['limit']) ? (int) $params['limit'] : 5 ;
+                    $productsCollection = $category->getProductCollection()->addCategoryFilter($category)
+                        ->addAttributeToFilter('type_id',$typeId)
+                        ->addFieldToFilter('visibility', Mage_Catalog_Model_Product_Visibility::VISIBILITY_BOTH)
+                        ->addAttributeToSelect($attributesProducts) ;
+                    $productsCollection->getSelect()->limit($limit);
+                     $_products = array();
+
+                    foreach($productsCollection as $product){
+                        $_product = array() ;
+                        foreach($attributesProducts as $attr) {
+                            $_product[$attr] = $product->getDataUsingMethod($attr);
+                        }
+                        $_products[] = $_product ;
+                        unset($_product);
+                    }
+                    unset($productsCollection) ;
+                    return $this->_exportDisplayItems($_products,$params,$attributesProducts) ;
+                }
         }
 
         return '';
@@ -116,18 +163,19 @@ class Mbiz_TrackingTags_Model_Filter extends Mage_Core_Model_Email_Template_Filt
     /**
      * @return string
      */
-    public function cartDirective($construction)
+     public function cartDirective($construction)
     {
-        $params   = $this->_getIncludeParameters($construction[2]);
 
+
+        $params   = $this->_getIncludeParameters($construction[2]);
         $cart = Mage::helper('checkout/cart')->getCart();
+
 
         // Attribute?
         if (isset($params['attr']) || isset($params['attribute'])) {
             $attr = isset($params['attr']) ? $params['attr'] : $params['attribute'];
             return Mage::helper('core')->jsQuoteEscape($cart->getDataUsingMethod($attr), '\'');
         }
-
         // Items?
         if (isset($params['items'])) {
             $attributes = explode(',', $params['items']);
@@ -140,7 +188,8 @@ class Mbiz_TrackingTags_Model_Filter extends Mage_Core_Model_Email_Template_Filt
                 $_items[] = $_item;
                 unset($_item);
             }
-            return Mage::helper('core')->jsonEncode($_items);
+
+            return $this->_exportDisplayItems($_items,$params,$attributes);
         }
 
         return '';
@@ -169,8 +218,8 @@ class Mbiz_TrackingTags_Model_Filter extends Mage_Core_Model_Email_Template_Filt
      */
     public function lastorderDirective($construction)
     {
-        $params   = $this->_getIncludeParameters($construction[2]);
 
+        $params   = $this->_getIncludeParameters($construction[2]);
         // Only if we have an order
         if ($order = Mage::helper('mbiz_trackingtags')->getLastOrder()) {
 
@@ -179,7 +228,6 @@ class Mbiz_TrackingTags_Model_Filter extends Mage_Core_Model_Email_Template_Filt
                 $attr = isset($params['attr']) ? $params['attr'] : $params['attribute'];
                 return Mage::helper('core')->jsQuoteEscape($order->getDataUsingMethod($attr), '\'');
             }
-
             // Items?
             if (isset($params['items'])) {
                 $attributes = explode(',', $params['items']);
@@ -192,10 +240,10 @@ class Mbiz_TrackingTags_Model_Filter extends Mage_Core_Model_Email_Template_Filt
                     $_items[] = $_item;
                     unset($_item);
                 }
-                return Mage::helper('core')->jsonEncode($_items);
+                return $this->_exportDisplayItems($_items,$params,$attributes);
+
             }
         }
-
         return '';
     }
 
